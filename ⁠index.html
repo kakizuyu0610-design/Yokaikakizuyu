@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>妖怪ウォッチ1 パーティシミュレーター</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            color: #333;
+            padding: 12px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            padding: 12px 0;
+            background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+            color: white;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+        }
+
+        /* サークルエリア */
+        .circle-container {
+            background: #fff;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #666;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .battle-circle {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            border: 6px solid #e0e0e0;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            background: radial-gradient(circle, #ffffff 40%, #f0f4f8 100%);
+        }
+
+        .slot {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background: #fff;
+            border: 3px solid #ccc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+            transition: all 0.2s;
+        }
+
+        .slot.front {
+            border-color: #ff4757;
+        }
+
+        .slot.back {
+            border-color: #70a1ff;
+        }
+
+        /* サークル上の6体の配置位置 */
+        .slot-1 { top: 10px; left: 95px; }   /* 前衛・中 */
+        .slot-2 { top: 60px; right: 15px; }  /* 前衛・右 */
+        .slot-3 { bottom: 60px; right: 15px; }/* 後衛・右 */
+        .slot-4 { bottom: 10px; left: 95px; } /* 後衛・中 */
+        .slot-5 { bottom: 60px; left: 15px; } /* 後衛・左 */
+        .slot-6 { top: 60px; left: 15px; }   /* 前衛・左 */
+
+        .slot-label {
+            font-size: 0.65rem;
+            color: #888;
+        }
+
+        .slot-name {
+            font-size: 0.75rem;
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 60px;
+        }
+
+        /* 陣形効果表示 */
+        .tribe-buffs {
+            background: #eef2f7;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            text-align: left;
+        }
+
+        .buff-tag {
+            display: inline-block;
+            background: #ff7675;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin: 2px;
+        }
+
+        /* 妖怪選択モーダル風エリア */
+        .select-area {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 16px;
+        }
+
+        .yokai-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .yokai-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+            font-size: 0.8rem;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .yokai-card:active {
+            background: #e0e0e0;
+        }
+
+        .tribe-badge {
+            font-size: 0.65rem;
+            color: #666;
+            display: block;
+        }
+
+        /* パーティ詳細 */
+        .party-list {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .party-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 0.85rem;
+        }
+
+        .party-item:last-child {
+            border-bottom: none;
+        }
+
+        select {
+            padding: 4px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>妖怪ウォッチ1 パーティシミュレーター</h1>
+    </header>
+
+    <!-- サークル配置画面 -->
+    <div class="circle-container">
+        <div class="section-title">
+            <span>サークル配置（タップして入れ替え）</span>
+            <span style="font-size: 0.75rem; color: #ff4757;">赤:前衛 / 青:後衛</span>
+        </div>
+
+        <div class="battle-circle">
+            <div class="slot slot-1 front" onclick="selectSlot(0)">
+                <span class="slot-label">前衛・中</span>
+                <span class="slot-name" id="slot-0-name">未設定</span>
+            </div>
+            <div class="slot slot-2 front" onclick="selectSlot(1)">
+                <span class="slot-label">前衛・右</span>
+                <span class="slot-name" id="slot-1-name">未設定</span>
+            </div>
+            <div class="slot slot-3 back" onclick="selectSlot(2)">
+                <span class="slot-label">後衛・右</span>
+                <span class="slot-name" id="slot-2-name">未設定</span>
+            </div>
+            <div class="slot slot-4 back" onclick="selectSlot(3)">
+                <span class="slot-label">後衛・中</span>
+                <span class="slot-name" id="slot-3-name">未設定</span>
+            </div>
+            <div class="slot slot-5 back" onclick="selectSlot(4)">
+                <span class="slot-label">後衛・左</span>
+                <span class="slot-name" id="slot-4-name">未設定</span>
+            </div>
+            <div class="slot slot-6 front" onclick="selectSlot(5)">
+                <span class="slot-label">前衛・左</span>
+                <span class="slot-name" id="slot-5-name">未設定</span>
+            </div>
+        </div>
+
+        <div class="tribe-buffs">
+            <strong>発動中の陣形効果:</strong>
+            <div id="buff-list" style="margin-top: 4px;">
+                <span style="color: #888;">同種族を隣り合わせると効果発動</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 妖怪選択リスト -->
+    <div class="select-area">
+        <div class="section-title">
+            <span id="target-slot-title">枠を選択してください</span>
+        </div>
+        <div class="yokai-grid" id="yokai-grid">
+            <!-- JavaScriptで妖怪一覧を生成 -->
+        </div>
+    </div>
+
+    <!-- パーティ構成詳細 -->
+    <div class="party-list">
+        <div class="section-title">編成中の妖怪一覧＆性格</div>
+        <div id="party-details">
+            <!-- 選択された妖怪のリスト -->
+        </div>
+    </div>
+
+    <script>
+        // 妖怪ウォッチ1用データベース（サンプル）
+        const yokaiData = [
+            { id: 1, name: "ブシニャン", tribe: "イサマシ", type: "アタッカー" },
+            { id: 2, name: "くさなぎ", tribe: "イサマシ", type: "アタッカー" },
+            { id: 3, name: "なまはげ", tribe: "イサマシ", type: "アタッカー" },
+            { id: 4, name: "山吹鬼", tribe: "ゴーケツ", type: "タンク" },
+            { id: 5, name: "ゴルニャン", tribe: "ゴーケツ", type: "タンク" },
+            { id: 6, name: "しゅらコマ", tribe: "フシギ", type: "妖術アタッカー" },
+            { id: 7, name: "キュウビ", tribe: "フシギ", type: "妖術アタッカー" },
+            { id: 8, name: "花さか爺", tribe: "ポカポカ", type: "ヒーラー" },
+            { id: 9, name: "心オバア", tribe: "ポカポカ", type: "ヒーラー" },
+            { id: 10, name: "オロチ", tribe: "ニョロロン", type: "アタッカー" },
+            { id: 11, name: "影オロチ", tribe: "ニョロロン", type: "アタッカー" },
+            { id: 12, name: "万尾獅子", tribe: "ブキミー", type: "アタッカー" }
+        ];
+
+        // 性格リスト
+        const personalities = ["荒くれ", "協調的", "頭脳派", "献身的", "慎重", "動じない"];
+
+        // 現在選択されている6体のスロットデータ
+        let party = [null, null, null, null, null, null];
+        let partyPersonalities = ["荒くれ", "荒くれ", "荒くれ", "荒くれ", "荒くれ", "荒くれ"];
+        let activeSlotIndex = 0;
+
+        // 初期化処理
+        function init() {
+            renderYokaiGrid();
+            selectSlot(0);
+        }
+
+        // スロット選択
+        function selectSlot(index) {
+            activeSlotIndex = index;
+            document.getElementById("target-slot-title").innerText = `スロット ${index + 1} にセットする妖怪を選択`;
+        }
+
+        // 妖怪をスロットにセット
+        function setYokai(yokai) {
+            party[activeSlotIndex] = yokai;
+            updateCircleUI();
+            checkTribeBuffs();
+            renderPartyDetails();
+        }
+
+        // サークルUIの更新
+        function updateCircleUI() {
+            party.forEach((yokai, idx) => {
+                const nameEl = document.getElementById(`slot-${idx}-name`);
+                if (yokai) {
+                    nameEl.innerText = yokai.name;
+                    nameEl.style.color = "#333";
+                } else {
+                    nameEl.innerText = "未設定";
+                    nameEl.style.color = "#aaa";
+                }
+            });
+        }
+
+        // 種族陣（陣形効果）の計算
+        function checkTribeBuffs() {
+            const buffListEl = document.getElementById("buff-list");
+            buffListEl.innerHTML = "";
+            let activeBuffs = [];
+
+            // 6個のサークルの隣接チェック (円形なので 0-1, 1-2, 2-3, 3-4, 4-5, 5-0)
+            for (let i = 0; i < 6; i++) {
+                let next = (i + 1) % 6;
+                if (party[i] && party[next] && party[i].tribe === party[next].tribe) {
+                    let buffName = getTribeBuffName(party[i].tribe);
+                    if (!activeBuffs.includes(buffName)) {
+                        activeBuffs.push(buffName);
+                    }
+                }
+            }
+
+            if (activeBuffs.length > 0) {
+                activeBuffs.forEach(buff => {
+                    const span = document.createElement("span");
+                    span.className = "buff-tag";
+                    span.innerText = buff;
+                    buffListEl.appendChild(span);
+                });
+            } else {
+                buffListEl.innerHTML = '<span style="color: #888;">隣り合う同種族がいません</span>';
+            }
+        }
+
+        // 種族ごとの陣効果名
+        function getTribeBuffName(tribe) {
+            const buffs = {
+                "イサマシ": "イサマシ陣 (ちからUP)",
+                "フシギ": "フシギ陣 (ようりょくUP)",
+                "ゴーケツ": "ゴーケツ陣 (まもりUP)",
+                "プリチー": "プリチー陣 (すばやさUP)",
+                "ポカポカ": "ポカポカ陣 (回復量UP)",
+                "ウスラカゲ": "ウスラカゲ陣 (とりつき成功率UP)",
+                "ブキミー": "ブキミー陣 (とりつき率UP)",
+                "ニョロロン": "ニョロロン陣 (取り憑かれにくさUP)"
+            };
+            return buffs[tribe] || `${tribe}陣`;
+        }
+
+        // 妖怪選択グリッドを描画
+        function renderYokaiGrid() {
+            const grid = document.getElementById("yokai-grid");
+            grid.innerHTML = "";
+            yokaiData.forEach(yokai => {
+                const card = document.createElement("div");
+                card.className = "yokai-card";
+                card.onclick = () => setYokai(yokai);
+                card.innerHTML = `
+                    <strong>${yokai.name}</strong>
+                    <span class="tribe-badge">[${yokai.tribe}]</span>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // パーティ詳細・性格設定の描画
+        function renderPartyDetails() {
+            const detailsEl = document.getElementById("party-details");
+            detailsEl.innerHTML = "";
+
+            party.forEach((yokai, idx) => {
+                const item = document.createElement("div");
+                item.className = "party-item";
+                
+                if (yokai) {
+                    let options = personalities.map(p => 
+                        `<option value="${p}" ${partyPersonalities[idx] === p ? 'selected' : ''}>${p}</option>`
+                    ).join("");
+
+                    item.innerHTML = `
+                        <span><strong>枠${idx + 1}:</strong> ${yokai.name} (${yokai.tribe})</span>
+                        <select onchange="changePersonality(${idx}, this.value)">
+                            ${options}
+                        </select>
+                    `;
+                } else {
+                    item.innerHTML = `<span style="color: #aaa;"><strong>枠${idx + 1}:</strong> 未選択</span>`;
+                }
+                detailsEl.appendChild(item);
+            });
+        }
+
+        // 性格変更処理
+        function changePersonality(index, val) {
+            partyPersonalities[index] = val;
+        }
+
+        // ページ読み込み時に実行
+        init();
+    </script>
+</body>
+</html>
